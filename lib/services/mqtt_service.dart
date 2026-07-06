@@ -33,13 +33,26 @@ class MqttService {
       _messageStreamController?.stream;
   bool get isConnected => _isConnected;
 
+  /// Tạo stream sớm để Bloc lắng nghe trước khi broker kết nối xong.
+  Stream<MqttMessageWrapper> prepareMessageStream() {
+    _messageStreamController ??=
+        StreamController<MqttMessageWrapper>.broadcast();
+    return _messageStreamController!.stream;
+  }
+
   Future<bool> connect() async {
+    if (_isConnected && _client != null) return true;
+
     try {
+      prepareMessageStream();
+
       final clientId = 'ev_charging_${DateTime.now().millisecondsSinceEpoch}';
       _client = MqttServerClient(_host, clientId);
       _client!.port = _port;
       _client!.secure = true;
-      _client!.keepAlivePeriod = 60;
+      _client!.keepAlivePeriod = 30;
+      _client!.connectTimeoutPeriod = 8000;
+      _client!.autoReconnect = true;
       _client!.onDisconnected = _onDisconnected;
       _client!.onConnected = _onConnected;
       _client!.onSubscribed = _onSubscribed;
@@ -53,11 +66,8 @@ class MqttService {
 
       _client!.connectionMessage = connMess;
 
-      _messageStreamController =
-          StreamController<MqttMessageWrapper>.broadcast();
-
       await _client!.connect().timeout(
-        const Duration(seconds: 10),
+        const Duration(seconds: 8),
         onTimeout: () {
           _client?.disconnect();
           throw TimeoutException('Kết nối MQTT quá thời gian chờ');
@@ -68,8 +78,8 @@ class MqttService {
 
       if (_isConnected) {
         _setupMessageListener();
-        await subscribe(dataTopic);
-        await subscribe(relayTopic);
+        subscribe(dataTopic);
+        subscribe(relayTopic);
       }
 
       return _isConnected;

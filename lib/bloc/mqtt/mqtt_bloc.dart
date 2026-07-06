@@ -13,6 +13,7 @@ class MqttBloc extends Bloc<MqttEvent, MqttState> {
 
   MqttBloc() : super(MqttInitial()) {
     on<MqttConnectEvent>(_onConnect);
+    on<MqttReconnectEvent>(_onReconnect);
     on<MqttDisconnectEvent>(_onDisconnect);
     on<_MqttMessageInternal>(_onMessage);
   }
@@ -23,10 +24,10 @@ class MqttBloc extends Bloc<MqttEvent, MqttState> {
   ) async {
     try {
       emit(MqttConnecting());
+      _setupMessageListener();
       final connected = await _mqttService.connect();
       if (connected) {
         emit(MqttConnected());
-        _setupMessageListener();
       } else {
         emit(const MqttError('Không thể kết nối tới broker MQTT.'));
       }
@@ -37,7 +38,7 @@ class MqttBloc extends Bloc<MqttEvent, MqttState> {
 
   void _setupMessageListener() {
     _messageSubscription?.cancel();
-    _messageSubscription = _mqttService.messageStream?.listen(
+    _messageSubscription = _mqttService.prepareMessageStream().listen(
       (wrapper) => add(_MqttMessageInternal(wrapper)),
     );
   }
@@ -50,6 +51,28 @@ class MqttBloc extends Bloc<MqttEvent, MqttState> {
         sequence: _messageSequence++,
       ),
     );
+  }
+
+  Future<void> _onReconnect(
+    MqttReconnectEvent event,
+    Emitter<MqttState> emit,
+  ) async {
+    try {
+      emit(MqttConnecting());
+      await _messageSubscription?.cancel();
+      _messageSubscription = null;
+      await _mqttService.disconnect();
+
+      _setupMessageListener();
+      final connected = await _mqttService.connect();
+      if (connected) {
+        emit(MqttConnected());
+      } else {
+        emit(const MqttError('Không thể kết nối tới broker MQTT.'));
+      }
+    } catch (e) {
+      emit(MqttError(e.toString()));
+    }
   }
 
   Future<void> _onDisconnect(

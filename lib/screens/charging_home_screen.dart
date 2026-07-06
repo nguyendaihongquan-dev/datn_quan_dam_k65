@@ -5,7 +5,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:ev_charging_station/bloc/mqtt/mqtt_bloc.dart';
+import 'package:ev_charging_station/bloc/mqtt/mqtt_event.dart';
 import 'package:ev_charging_station/bloc/mqtt/mqtt_state.dart';
+import 'package:ev_charging_station/bloc/relay/relay_bloc.dart';
+import 'package:ev_charging_station/bloc/relay/relay_event.dart';
 import 'package:ev_charging_station/models/electric_data.dart';
 import 'package:ev_charging_station/services/mqtt_service.dart';
 import 'package:ev_charging_station/theme/app_theme.dart';
@@ -32,6 +35,12 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
   String? _error;
   bool _isUsingDefaultData = false;
   Timer? _dataTimeoutTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _isConnecting = true;
+  }
 
   @override
   void dispose() {
@@ -140,43 +149,72 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
     return AppColors.textSecondary;
   }
 
+  Future<void> _handleRefresh() async {
+    final mqttBloc = context.read<MqttBloc>();
+    context.read<RelayBloc>().add(const RelayInitEvent());
+
+    final refreshFuture = mqttBloc.stream
+        .firstWhere((state) => state is MqttConnected || state is MqttError)
+        .timeout(const Duration(seconds: 12));
+
+    mqttBloc.add(const MqttReconnectEvent());
+
+    try {
+      await refreshFuture;
+    } catch (_) {
+      // Hết thời gian chờ — vẫn kết thúc indicator.
+    }
+
+    if (!mounted) return;
+    if (_latest == null) {
+      _startDataTimeout();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<MqttBloc, MqttState>(
       listener: (context, state) => _handleMqttState(state),
       child: Scaffold(
         body: SafeArea(
-          child: _isConnecting && !_isConnected
-              ? _buildLoading()
-              : _buildDashboard(),
+          child: RefreshIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.surface,
+            strokeWidth: 2.5,
+            onRefresh: _handleRefresh,
+            child: _buildDashboard(),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildLoading() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildConnectingBanner() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: const Row(
         children: [
-          const SizedBox(
-            width: 48,
-            height: 48,
+          SizedBox(
+            width: 20,
+            height: 20,
             child: CircularProgressIndicator(
               color: AppColors.primary,
-              strokeWidth: 3,
+              strokeWidth: 2,
             ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            _isConnecting ? 'Đang kết nối MQTT...' : 'Chờ dữ liệu từ trạm sạc',
-            style: const TextStyle(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          ConnectionStatus(
-            isConnected: _isConnected,
-            isConnecting: _isConnecting,
-            error: _error,
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Đang kết nối MQTT...',
+              style: TextStyle(color: AppColors.primary, fontSize: 13),
+            ),
           ),
         ],
       ),
@@ -186,151 +224,150 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
   Widget _buildDashboard() {
     final data = _latest ?? ElectricData.placeholder();
 
-    return SingleChildScrollView(
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Image.asset(
-                      'assets/icon/app_icon.png',
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'EV Charging',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Trạm sạc năng lượng',
-                        style: TextStyle(
-                          color: AppColors.textSecondary.withValues(alpha: 0.8),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              ConnectionStatus(
-                isConnected: _isConnected,
-                isConnecting: _isConnecting,
-                error: _error,
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          if (_isUsingDefaultData) _buildDefaultDataBanner(),
-          if (_hasAlarmFor(data)) _buildAlarmBanner(),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.surface,
-                  AppColors.surfaceLight.withValues(alpha: 0.5),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _statusColor.withValues(alpha: 0.3)),
-            ),
-            child: Column(
+      children: [
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
               children: [
-                ChargingStationAnimation(
-                  isCharging: _isChargingFor(data),
-                  hasAlarm: _hasAlarmFor(data),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.asset(
+                    'assets/icon/app_icon.png',
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: _statusColor,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: _statusColor.withValues(alpha: 0.5),
-                            blurRadius: 8,
-                          ),
-                        ],
+                    const Text(
+                      'EV Charging',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Text(
-                      !_hasLiveData ? 'Không có dữ liệu' : data.statusLabel,
+                      'Trạm sạc năng lượng',
                       style: TextStyle(
-                        color: _statusColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary.withValues(alpha: 0.8),
+                        fontSize: 13,
                       ),
                     ),
                   ],
                 ),
               ],
             ),
+            ConnectionStatus(
+              isConnected: _isConnected,
+              isConnecting: _isConnecting,
+              error: _error,
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        if (_isConnecting && !_isConnected) _buildConnectingBanner(),
+        if (_isUsingDefaultData) _buildDefaultDataBanner(),
+        if (_hasAlarmFor(data)) _buildAlarmBanner(),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.surface,
+                AppColors.surfaceLight.withValues(alpha: 0.5),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _statusColor.withValues(alpha: 0.3)),
           ),
-          const SizedBox(height: 20),
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.85,
+          child: Column(
             children: [
-              MetricCard(
-                label: 'Điện áp',
-                value: data.voltage.toStringAsFixed(1),
-                unit: 'V',
-                icon: Icons.bolt,
-                accentColor: AppColors.accent,
+              ChargingStationAnimation(
+                isCharging: _isChargingFor(data),
+                hasAlarm: _hasAlarmFor(data),
               ),
-              MetricCard(
-                label: 'Dòng điện',
-                value: data.current.toStringAsFixed(2),
-                unit: 'A',
-                icon: Icons.electric_bolt,
-              ),
-              MetricCard(
-                label: 'Công suất',
-                value: data.power.toStringAsFixed(2),
-                unit: 'kW',
-                icon: Icons.speed,
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: _statusColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: _statusColor.withValues(alpha: 0.5),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    !_hasLiveData ? 'Không có dữ liệu' : data.statusLabel,
+                    style: TextStyle(
+                      color: _statusColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildEnergyCard(data),
-          const SizedBox(height: 16),
-          const RelayControlCard(),
-          const SizedBox(height: 16),
-          PowerChart(spots: List.from(_powerHistory)),
-          const SizedBox(height: 32),
-        ],
-      ),
+        ),
+        const SizedBox(height: 20),
+        GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.85,
+          children: [
+            MetricCard(
+              label: 'Điện áp',
+              value: data.voltage.toStringAsFixed(1),
+              unit: 'V',
+              icon: Icons.bolt,
+              accentColor: AppColors.accent,
+            ),
+            MetricCard(
+              label: 'Dòng điện',
+              value: data.current.toStringAsFixed(2),
+              unit: 'A',
+              icon: Icons.electric_bolt,
+            ),
+            MetricCard(
+              label: 'Công suất',
+              value: data.power.toStringAsFixed(2),
+              unit: 'kW',
+              icon: Icons.speed,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _buildEnergyCard(data),
+        const SizedBox(height: 16),
+        const RelayControlCard(),
+        const SizedBox(height: 16),
+        PowerChart(spots: List.from(_powerHistory)),
+        const SizedBox(height: 32),
+      ],
     );
   }
 

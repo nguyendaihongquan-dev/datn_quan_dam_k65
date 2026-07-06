@@ -14,3 +14,7 @@ class MqttConnectEvent extends MqttEvent {
 class MqttDisconnectEvent extends MqttEvent {
   const MqttDisconnectEvent();
 }
+
+class MqttReconnectEvent extends MqttEvent {
+  const MqttReconnectEvent();
+}
