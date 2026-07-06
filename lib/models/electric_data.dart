@@ -37,7 +37,7 @@ class ElectricData {
     'minute': minute,
   };
 
-  bool get isCharging => current > 0.1;
+  bool get isCharging => current > 0.1 || power > 0.05;
   bool get hasAlarm => alarm != 0;
 
   String get timeLabel =>

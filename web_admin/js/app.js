@@ -9,6 +9,8 @@ const CONFIG = {
   fakeIntervalMs: 2000,
   storageKey: 'ev_mqtt_topics',
   tabKey: 'ev_admin_tab',
+  fakeKey: 'ev_admin_fake',
+  dataStaleMs: 15000,
   maxInbox: 50,
   maxChartPoints: 40,
 };
@@ -26,6 +28,9 @@ let statsSent = 0;
 let fakeSentCount = 0;
 let relayManager = null;
 let chargingAnimation = null;
+let lastElectricData = null;
+let staleDataTimer = null;
+let fakeEnabledPref = false;
 
 const connDot = $('connDot');
 const connLabel = $('connLabel');
@@ -51,6 +56,7 @@ $('brokerWs').textContent = `wss://${CONFIG.host}:${CONFIG.port}/mqtt`;
 
 initTabs();
 loadTopicConfig();
+loadFakePreference();
 bindTopicPersistence();
 setConnected(false);
 renderSubscribedTopics();
@@ -59,6 +65,7 @@ drawChart();
 initRelay();
 chargingAnimation = new ChargingFlowAnimation('flowCanvas');
 chargingAnimation.setState('idle');
+updateFakeVisual(false);
 log('Sẵn sàng. Kết nối MQTT để bắt đầu giám sát realtime.');
 
 /* ── Tabs ── */
@@ -98,6 +105,15 @@ function switchTab(tabId) {
   });
 
   localStorage.setItem(CONFIG.tabKey, tabId);
+
+  if (tabId === 'manage') {
+    requestAnimationFrame(() => {
+      chargingAnimation?.resize();
+      if (lastElectricData) {
+        setStationUI(lastElectricData);
+      }
+    });
+  }
 }
 
 /* ── Topic config ── */
@@ -122,6 +138,82 @@ function saveTopicConfig() {
     }),
   );
   updateFakeTopicPreview();
+}
+
+function loadFakePreference() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CONFIG.fakeKey) || '{}');
+    fakeEnabledPref = Boolean(saved.enabled);
+  } catch {
+    fakeEnabledPref = false;
+  }
+  fakeToggle.checked = fakeEnabledPref;
+}
+
+function updateFakeVisual(running) {
+  fakeStatus.className = `fake-status fake-status--${running ? 'on' : 'off'}`;
+  fakeStatusText.textContent = running
+    ? `Đang chạy → ${getPublishTopic()}`
+    : 'Đang tắt';
+  fakeBadge.classList.toggle('tabs__badge--hidden', !running);
+  document.querySelector('.fake-card')?.classList.toggle('fake-card--live', running);
+}
+
+function saveFakePreference(enabled) {
+  fakeEnabledPref = Boolean(enabled);
+  localStorage.setItem(
+    CONFIG.fakeKey,
+    JSON.stringify({ enabled: fakeEnabledPref }),
+  );
+}
+
+function isElectricCharging(data) {
+  return (data.current > 0.1) || (data.power > 0.05);
+}
+
+function clearStaleTimer() {
+  if (staleDataTimer) {
+    clearTimeout(staleDataTimer);
+    staleDataTimer = null;
+  }
+}
+
+function scheduleStaleCheck() {
+  clearStaleTimer();
+  staleDataTimer = setTimeout(() => {
+    if (fakeTimer) return;
+    resetStationToIdle('Không nhận dữ liệu trong 15s');
+  }, CONFIG.dataStaleMs);
+}
+
+function resetStationToIdle(message = 'Chờ dữ liệu') {
+  clearStaleTimer();
+  lastElectricData = null;
+  powerHistory.length = 0;
+  drawChart();
+
+  $('mVoltage').textContent = '—';
+  $('mCurrent').textContent = '—';
+  $('mPower').textContent = '—';
+  $('mEnergy').textContent = '—';
+  $('mTime').textContent = '—';
+  $('lastUpdate').textContent = '—';
+
+  $('stationStatus').textContent = message;
+  $('stationStatus').className = 'live-hero__status live-hero__status--idle';
+
+  const chip = $('mStatus');
+  chip.textContent = '○ Chờ kết nối';
+  chip.className = 'status-chip status-chip--idle';
+
+  chargingAnimation?.setState('idle', false);
+
+  const batteryStd = document.querySelector('.battery-icon--std');
+  const batteryCharging = document.querySelector('.battery-icon--charging');
+  if (batteryStd && batteryCharging) {
+    batteryStd.hidden = false;
+    batteryCharging.hidden = true;
+  }
 }
 
 function bindTopicPersistence() {
@@ -185,6 +277,7 @@ function setLastUpdate() {
 }
 
 function setStationUI(data) {
+  const charging = isElectricCharging(data);
   let statusText = 'Chờ kết nối';
   let chipClass = 'status-chip--idle';
   let heroStatus = 'Trạm sẵn sàng';
@@ -195,7 +288,7 @@ function setStationUI(data) {
     chipClass = 'status-chip--alarm';
     heroStatus = 'Cảnh báo hệ thống';
     visualState = 'alarm';
-  } else if (data.current > 0.1) {
+  } else if (charging) {
     statusText = '⚡ Đang sạc';
     chipClass = 'status-chip--charging';
     heroStatus = 'Đang sạc';
@@ -214,14 +307,13 @@ function setStationUI(data) {
   statusEl.textContent = heroStatus;
   statusEl.className = `live-hero__status live-hero__status--${visualState}`;
 
-  chargingAnimation?.setState(visualState, data.current > 0.1);
+  chargingAnimation?.setState(visualState, charging);
 
   const batteryStd = document.querySelector('.battery-icon--std');
   const batteryCharging = document.querySelector('.battery-icon--charging');
   if (batteryStd && batteryCharging) {
-    const showCharging = data.current > 0.1;
-    batteryStd.hidden = showCharging;
-    batteryCharging.hidden = !showCharging;
+    batteryStd.hidden = charging;
+    batteryCharging.hidden = !charging;
   }
 }
 
@@ -330,6 +422,10 @@ function pushPower(power) {
 
 /* ── Metrics ── */
 function updateMetrics(data) {
+  lastElectricData = data;
+  clearStaleTimer();
+  scheduleStaleCheck();
+
   const fields = [
     ['mVoltage', data.voltage, 1, 'voltage'],
     ['mCurrent', data.current, 2, 'current'],
@@ -491,12 +587,18 @@ function publishPayload(payload) {
 
 /* ── Fake data ── */
 function setFakeRunning(running) {
-  fakeStatus.className = `fake-status fake-status--${running ? 'on' : 'off'}`;
-  fakeStatusText.textContent = running
-    ? `Đang chạy → ${getPublishTopic()}`
-    : 'Đang tắt';
-  fakeBadge.classList.toggle('tabs__badge--hidden', !running);
-  document.querySelector('.fake-card')?.classList.toggle('fake-card--live', running);
+  fakeToggle.checked = running;
+  updateFakeVisual(running);
+}
+
+function skipFakeToChargingPhase() {
+  let data = fakeGenerator.next();
+  let guard = 0;
+  while (!isElectricCharging(data) && guard < fakeGenerator.cycleLength) {
+    data = fakeGenerator.next();
+    guard++;
+  }
+  return data;
 }
 
 function publishFakeSample() {
@@ -508,24 +610,34 @@ function publishFakeSample() {
   }
 }
 
-function startFake() {
+function startFake({ persist = true } = {}) {
   if (fakeTimer) return;
   fakeGenerator.reset();
   fakeSentCount = 0;
   $('fakeSentCount').textContent = '0';
-  publishFakeSample();
+
+  const firstSample = skipFakeToChargingPhase();
+  if (publishPayload(firstSample)) {
+    fakeSentCount++;
+    $('fakeSentCount').textContent = fakeSentCount;
+    updateMetrics(firstSample);
+  }
+
   fakeTimer = setInterval(publishFakeSample, CONFIG.fakeIntervalMs);
   setFakeRunning(true);
+  if (persist) saveFakePreference(true);
   log(`Bật Fake Data → "${getPublishTopic()}"`, 'pub');
 }
 
-function stopFake() {
+function stopFake({ persist = true, resetUi = true } = {}) {
   if (fakeTimer) {
     clearInterval(fakeTimer);
     fakeTimer = null;
   }
   fakeGenerator.reset();
   setFakeRunning(false);
+  if (persist) saveFakePreference(false);
+  if (resetUi) resetStationToIdle('Chờ dữ liệu');
   log('Tắt Fake Data');
 }
 
@@ -563,6 +675,11 @@ function connectMqtt() {
     log('Kết nối thành công', 'pub');
     subscribeTopic(getSubscribeTopicInput());
     subscribeTopic(CONFIG.defaultRelayTopic);
+    scheduleStaleCheck();
+
+    if (fakeEnabledPref) {
+      startFake({ persist: false });
+    }
   });
 
   client.on('message', handleIncomingMessage);
@@ -575,8 +692,9 @@ function connectMqtt() {
     setConnected(false);
     subscribedTopics.clear();
     renderSubscribedTopics();
-    fakeToggle.checked = false;
-    stopFake();
+    stopFake({ persist: false, resetUi: false });
+    fakeToggle.checked = fakeEnabledPref;
+    setFakeRunning(false);
     log('Đã ngắt kết nối');
   });
 
@@ -586,8 +704,9 @@ function connectMqtt() {
 }
 
 function disconnectMqtt() {
-  stopFake();
-  fakeToggle.checked = false;
+  stopFake({ persist: false, resetUi: true });
+  fakeToggle.checked = fakeEnabledPref;
+  clearStaleTimer();
   if (client) {
     client.end(true);
     client = null;
@@ -604,8 +723,8 @@ btnSubscribe.addEventListener('click', () => subscribeTopic());
 btnUnsubscribe.addEventListener('click', () => unsubscribeTopic());
 
 fakeToggle.addEventListener('change', () => {
-  if (fakeToggle.checked) startFake();
-  else stopFake();
+  if (fakeToggle.checked) startFake({ persist: true });
+  else stopFake({ persist: true, resetUi: true });
 });
 
 $('manualForm').addEventListener('submit', (e) => {
@@ -660,8 +779,6 @@ $('btnClearInbox').addEventListener('click', () => {
       <p>Chưa có bản tin. Kết nối MQTT và subscribe topic.</p>
     </div>`;
 });
-
-setFakeRunning(false);
 
 /* ── Relay (Firebase + MQTT) ── */
 function initRelay() {

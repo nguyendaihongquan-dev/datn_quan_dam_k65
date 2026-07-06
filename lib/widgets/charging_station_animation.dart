@@ -39,23 +39,35 @@ class _ChargingStationAnimationState extends State<ChargingStationAnimation>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    if (widget.isCharging) {
-      _flowController.repeat();
-      _pulseController.repeat(reverse: true);
-    }
+    _syncAnimationState();
   }
 
   @override
   void didUpdateWidget(ChargingStationAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isCharging && !oldWidget.isCharging) {
-      _flowController.repeat();
-      _pulseController.repeat(reverse: true);
-    } else if (!widget.isCharging && oldWidget.isCharging) {
-      _flowController.stop();
-      _pulseController.stop();
-      _pulseController.reset();
+    if (widget.isCharging != oldWidget.isCharging ||
+        widget.hasAlarm != oldWidget.hasAlarm) {
+      _syncAnimationState();
     }
+  }
+
+  void _syncAnimationState() {
+    if (widget.isCharging) {
+      if (!_flowController.isAnimating) {
+        _flowController.repeat();
+      }
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+      return;
+    }
+
+    _flowController
+      ..stop()
+      ..reset();
+    _pulseController
+      ..stop()
+      ..reset();
   }
 
   @override
@@ -153,11 +165,7 @@ class _ChargingStationAnimationState extends State<ChargingStationAnimation>
                   ]
                 : null,
           ),
-          child: Icon(
-            Icons.ev_station,
-            color: _accentColor,
-            size: 36,
-          ),
+          child: Icon(Icons.ev_station, color: _accentColor, size: 36),
         ),
         const SizedBox(height: 6),
         const Text(
@@ -185,9 +193,7 @@ class _ChargingStationAnimationState extends State<ChargingStationAnimation>
             ),
           ),
           child: Icon(
-            widget.isCharging
-                ? Icons.battery_charging_full
-                : Icons.battery_std,
+            widget.isCharging ? Icons.battery_charging_full : Icons.battery_std,
             color: _accentColor,
           ),
         ),
@@ -228,12 +234,7 @@ class _ElectricityFlowPainter extends CustomPainter {
 
     final path1 = Path()
       ..moveTo(leftX + 28, centerY)
-      ..quadraticBezierTo(
-        (leftX + midX) / 2,
-        centerY - 30,
-        midX,
-        centerY,
-      );
+      ..quadraticBezierTo((leftX + midX) / 2, centerY - 30, midX, centerY);
 
     final path2 = Path()
       ..moveTo(midX, centerY)

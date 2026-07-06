@@ -34,12 +34,6 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
   Timer? _dataTimeoutTimer;
 
   @override
-  void initState() {
-    super.initState();
-    _startDataTimeout();
-  }
-
-  @override
   void dispose() {
     _dataTimeoutTimer?.cancel();
     super.dispose();
@@ -56,18 +50,42 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
   }
 
   void _onDataTimeout() {
-    if (!mounted || _latest != null) return;
-    setState(() => _isUsingDefaultData = true);
+    if (!mounted) return;
+    setState(() {
+      _latest = null;
+      _isUsingDefaultData = true;
+      _powerHistory.clear();
+    });
   }
 
   void _switchToDefaultData() {
-    if (_latest != null) return;
     _cancelDataTimeout();
-    setState(() => _isUsingDefaultData = true);
+    setState(() {
+      _latest = null;
+      _isUsingDefaultData = true;
+      _powerHistory.clear();
+    });
+  }
+
+  void _applyElectricData(ElectricData data) {
+    _cancelDataTimeout();
+    setState(() {
+      _latest = data;
+      _isUsingDefaultData = false;
+      _powerHistory.add(FlSpot(_powerHistory.length.toDouble(), data.power));
+      if (_powerHistory.length > 30) {
+        _powerHistory.removeAt(0);
+        for (int i = 0; i < _powerHistory.length; i++) {
+          _powerHistory[i] = FlSpot(i.toDouble(), _powerHistory[i].y);
+        }
+      }
+    });
+    _startDataTimeout();
   }
 
   void _handleMqttState(MqttState state) {
     if (state is MqttConnecting) {
+      _cancelDataTimeout();
       setState(() {
         _isConnecting = true;
         _error = null;
@@ -78,46 +96,45 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
         _isConnecting = false;
         _error = null;
       });
+      _startDataTimeout();
     } else if (state is MqttDisconnected) {
       setState(() {
         _isConnected = false;
         _isConnecting = false;
       });
+      _switchToDefaultData();
     } else if (state is MqttError) {
       setState(() {
         _error = state.message;
         _isConnecting = false;
       });
       _switchToDefaultData();
-    } else if (state is MqttMessageReceived &&
-        state.topic == MqttService.dataTopic) {
+    } else if (state is MqttMessageReceived && _isElectricTopic(state.topic)) {
       try {
         final data = ElectricData.fromJson(
           json.decode(state.message) as Map<String, dynamic>,
         );
-        _cancelDataTimeout();
-        setState(() {
-          _latest = data;
-          _isUsingDefaultData = false;
-          _powerHistory.add(
-            FlSpot(_powerHistory.length.toDouble(), data.power),
-          );
-          if (_powerHistory.length > 30) {
-            _powerHistory.removeAt(0);
-            for (int i = 0; i < _powerHistory.length; i++) {
-              _powerHistory[i] = FlSpot(i.toDouble(), _powerHistory[i].y);
-            }
-          }
-        });
+        _applyElectricData(data);
       } catch (_) {}
     }
   }
 
+  bool get _hasLiveData => _latest != null && !_isUsingDefaultData;
+
+  bool _isChargingFor(ElectricData data) => _hasLiveData && data.isCharging;
+
+  bool _hasAlarmFor(ElectricData data) => _hasLiveData && data.hasAlarm;
+
+  bool _isElectricTopic(String topic) {
+    final normalized = topic.replaceFirst(RegExp(r'^/'), '');
+    return normalized == MqttService.dataTopic;
+  }
+
   Color get _statusColor {
-    if (_isUsingDefaultData && _latest == null) {
+    if (!_hasLiveData) {
       return AppColors.textSecondary;
     }
-    final data = _latest ?? ElectricData.placeholder();
+    final data = _latest!;
     if (data.hasAlarm) return AppColors.warning;
     if (data.isCharging) return AppColors.primary;
     return AppColors.textSecondary;
@@ -129,7 +146,7 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
       listener: (context, state) => _handleMqttState(state),
       child: Scaffold(
         body: SafeArea(
-          child: _latest == null && !_isUsingDefaultData
+          child: _isConnecting && !_isConnected
               ? _buildLoading()
               : _buildDashboard(),
         ),
@@ -207,7 +224,7 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
           ),
           const SizedBox(height: 24),
           if (_isUsingDefaultData) _buildDefaultDataBanner(),
-          if (data.hasAlarm) _buildAlarmBanner(),
+          if (_hasAlarmFor(data)) _buildAlarmBanner(),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -226,8 +243,8 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
             child: Column(
               children: [
                 ChargingStationAnimation(
-                  isCharging: data.isCharging,
-                  hasAlarm: data.hasAlarm,
+                  isCharging: _isChargingFor(data),
+                  hasAlarm: _hasAlarmFor(data),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -249,9 +266,7 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      _isUsingDefaultData
-                          ? 'Không có dữ liệu'
-                          : data.statusLabel,
+                      !_hasLiveData ? 'Không có dữ liệu' : data.statusLabel,
                       style: TextStyle(
                         color: _statusColor,
                         fontSize: 16,

@@ -9,6 +9,7 @@ import 'mqtt_state.dart';
 class MqttBloc extends Bloc<MqttEvent, MqttState> {
   final MqttService _mqttService = MqttService();
   StreamSubscription? _messageSubscription;
+  int _messageSequence = 0;
 
   MqttBloc() : super(MqttInitial()) {
     on<MqttConnectEvent>(_onConnect);
@@ -46,6 +47,7 @@ class MqttBloc extends Bloc<MqttEvent, MqttState> {
       MqttMessageReceived(
         topic: event.wrapper.topic,
         message: event.wrapper.message,
+        sequence: _messageSequence++,
       ),
     );
   }

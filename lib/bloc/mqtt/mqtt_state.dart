@@ -27,9 +27,14 @@ class MqttError extends MqttState {
 class MqttMessageReceived extends MqttState {
   final String topic;
   final String message;
+  final int sequence;
 
-  const MqttMessageReceived({required this.topic, required this.message});
+  const MqttMessageReceived({
+    required this.topic,
+    required this.message,
+    required this.sequence,
+  });
 
   @override
-  List<Object?> get props => [topic, message];
+  List<Object?> get props => [topic, message, sequence];
 }

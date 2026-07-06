@@ -50,9 +50,11 @@ class ChargingFlowAnimation {
   }
 
   setState(state, isFlowing = null) {
-    const changed = this.state !== state || this.isFlowing !== isFlowing;
+    const prevState = this.state;
+    const wasFlowing = this.isFlowing;
+    const nextFlowing = isFlowing ?? (state === 'charging' || state === 'alarm');
     this.state = state;
-    this.isFlowing = isFlowing ?? (state === 'charging');
+    this.isFlowing = nextFlowing;
 
     document.getElementById('chargingDiagram')?.classList.remove(
       'charging-diagram--idle',
@@ -64,15 +66,24 @@ class ChargingFlowAnimation {
     );
 
     if (this.isFlowing) {
-      if (!this.rafId) this._loop();
+      if (!this.rafId || !wasFlowing) {
+        this.lastTs = 0;
+        this._stopLoop();
+        this._loop();
+      }
     } else {
       this._stopLoop();
+      this.lastTs = 0;
       this.progress = 0;
       this.pulse = 0.6;
       this._draw();
     }
 
-    return changed;
+    return prevState !== state || wasFlowing !== nextFlowing;
+  }
+
+  resize() {
+    this._resize();
   }
 
   _stopLoop() {
