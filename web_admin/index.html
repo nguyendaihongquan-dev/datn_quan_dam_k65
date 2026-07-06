@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EV Charging — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="bg-glow">
+    <div class="orb orb--1"></div>
+    <div class="orb orb--2"></div>
+    <div class="orb orb--3"></div>
+  </div>
+
+  <div class="app">
+    <header class="header">
+      <div class="header__brand">
+        <div class="header__icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M13 2L4.5 13.5H11L10 22L19.5 9.5H13L13 2Z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div>
+          <h1>EV Charging Admin</h1>
+          <p>Bảng điều khiển MQTT realtime</p>
+        </div>
+      </div>
+
+      <div class="header__meta">
+        <div class="stat-pill">
+          <span class="stat-pill__label">Nhận</span>
+          <span id="statReceived" class="stat-pill__value">0</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-pill__label">Gửi</span>
+          <span id="statSent" class="stat-pill__value">0</span>
+        </div>
+        <div class="header__status" id="connBadge">
+          <span id="connDot" class="status-dot status-dot--offline"></span>
+          <span id="connLabel">Offline</span>
+        </div>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <span class="tabs__indicator" id="tabIndicator"></span>
+      <button class="tabs__btn tabs__btn--active" data-tab="manage" role="tab" aria-selected="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Quản lý
+      </button>
+      <button class="tabs__btn" data-tab="test" role="tab" aria-selected="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 3h6v7l5 9H4l5-9V3z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        Kiểm thử
+        <span id="fakeBadge" class="tabs__badge tabs__badge--hidden">LIVE</span>
+      </button>
+    </nav>
+
+    <!-- TAB QUẢN LÝ -->
+    <div id="tab-manage" class="tab-panel tab-panel--active" role="tabpanel">
+      <section class="live-hero animate-in">
+        <div class="live-hero__ambient"></div>
+        <div class="live-hero__top">
+          <div class="live-hero__left">
+            <div>
+              <span class="live-hero__eyebrow">
+                <span class="live-dot"></span> Giám sát realtime
+              </span>
+              <h2 id="stationStatus" class="live-hero__status">Chờ dữ liệu</h2>
+              <p class="live-hero__updated">Cập nhật: <span id="lastUpdate">—</span></p>
+            </div>
+          </div>
+          <div class="live-hero__chart-wrap">
+            <canvas id="powerChart" width="320" height="100" aria-label="Biểu đồ công suất"></canvas>
+          </div>
+        </div>
+
+        <div class="charging-diagram charging-diagram--idle" id="chargingDiagram">
+          <canvas id="flowCanvas" aria-hidden="true"></canvas>
+          <div class="charging-diagram__nodes">
+            <div class="charge-node charge-node--grid">
+              <div class="charge-node__icon">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2v4M8 6h8M5 10h14v10a2 2 0 01-2 2H7a2 2 0 01-2-2V10z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M9 14h6M12 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span class="charge-node__label">Lưới điện</span>
+            </div>
+
+            <div class="charge-node charge-node--station" id="chargeStationNode">
+              <div class="charge-node__icon charge-node__icon--station">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 4h8l2 4h4v12H4V4h2z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                  <path d="M13 2L4.5 13.5H11L10 22L19.5 9.5H13L13 2Z" fill="currentColor" transform="translate(1,-1) scale(0.55)"/>
+                </svg>
+              </div>
+              <span class="charge-node__label">Trạm sạc</span>
+            </div>
+
+            <div class="charge-node charge-node--battery" id="chargeBatteryNode">
+              <div class="charge-node__icon" id="batteryIcon">
+                <svg class="battery-icon battery-icon--std" width="26" height="26" viewBox="0 0 24 24" fill="none">
+                  <rect x="4" y="7" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                  <path d="M18 10h2v4h-2z" fill="currentColor"/>
+                  <rect x="7" y="10" width="6" height="4" rx="1" fill="currentColor" opacity="0.5"/>
+                </svg>
+                <svg class="battery-icon battery-icon--charging" width="26" height="26" viewBox="0 0 24 24" fill="none" hidden>
+                  <rect x="4" y="7" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                  <path d="M18 10h2v4h-2z" fill="currentColor"/>
+                  <path d="M10 9l-2 4h2l-1 3 4-6h-2l1-1z" fill="currentColor"/>
+                </svg>
+              </div>
+              <span class="charge-node__label">Pin xe</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="metrics metrics--hero">
+          <div class="metric metric--hero animate-in animate-in--d1" data-metric="voltage">
+            <div class="metric__glow"></div>
+            <div class="metric__icon-wrap metric__icon-wrap--accent">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M13 2L4.5 13.5H11L10 22L19.5 9.5H13L13 2Z" fill="currentColor"/></svg>
+            </div>
+            <span class="metric__label">Điện áp</span>
+            <div class="metric__row">
+              <span class="metric__value" id="mVoltage">—</span>
+              <span class="metric__unit">V</span>
+            </div>
+          </div>
+          <div class="metric metric--hero animate-in animate-in--d2" data-metric="current">
+            <div class="metric__glow"></div>
+            <div class="metric__icon-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2v6M8 6h8M6 12h12v10H6z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <span class="metric__label">Dòng điện</span>
+            <div class="metric__row">
+              <span class="metric__value" id="mCurrent">—</span>
+              <span class="metric__unit">A</span>
+            </div>
+          </div>
+          <div class="metric metric--hero animate-in animate-in--d3" data-metric="power">
+            <div class="metric__glow"></div>
+            <div class="metric__icon-wrap metric__icon-wrap--green">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 17l6-6 4 4 8-10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span class="metric__label">Công suất</span>
+            <div class="metric__row">
+              <span class="metric__value" id="mPower">—</span>
+              <span class="metric__unit">kW</span>
+            </div>
+          </div>
+          <div class="metric metric--hero animate-in animate-in--d4" data-metric="energy">
+            <div class="metric__glow"></div>
+            <div class="metric__icon-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3c-4 3-6 5.5-6 9a6 6 0 1012 0c0-3.5-2-6-6-9z" stroke="currentColor" stroke-width="2"/></svg>
+            </div>
+            <span class="metric__label">Năng lượng</span>
+            <div class="metric__row">
+              <span class="metric__value" id="mEnergy">—</span>
+              <span class="metric__unit">kWh</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="live-hero__footer">
+          <span id="mStatus" class="status-chip status-chip--idle">Chờ kết nối</span>
+          <span class="live-hero__time">🕐 <span id="mTime">—</span></span>
+        </div>
+      </section>
+
+      <div class="grid grid--2">
+        <section class="card animate-in animate-in--d1">
+          <div class="card__title">
+            <h2>Kết nối Broker</h2>
+            <span class="card__tag">MQTT</span>
+          </div>
+          <div class="info-list">
+            <div class="info-row">
+              <span class="label">Host</span>
+              <code id="brokerHost">—</code>
+            </div>
+            <div class="info-row">
+              <span class="label">WebSocket</span>
+              <code id="brokerWs" class="code--sm">—</code>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="btnConnect" class="btn btn--primary">
+              <span class="btn__dot"></span> Kết nối
+            </button>
+            <button id="btnDisconnect" class="btn btn--ghost" disabled>Ngắt</button>
+          </div>
+        </section>
+
+        <section class="card card--accent animate-in animate-in--d2">
+          <div class="card__title">
+            <h2>Cấu hình Topic</h2>
+            <span class="card__tag card__tag--green">Config</span>
+          </div>
+          <p class="hint">App Flutter lắng nghe <code>electric</code>. Đặt topic gửi trùng để test.</p>
+
+          <div class="topic-block">
+            <label class="field-label" for="subscribeTopic">Lắng nghe (Subscribe)</label>
+            <div class="topic-row">
+              <input type="text" id="subscribeTopic" value="electric" />
+              <button type="button" id="btnSubscribe" class="btn btn--primary btn--sm" disabled>+</button>
+              <button type="button" id="btnUnsubscribe" class="btn btn--ghost btn--sm" disabled>−</button>
+            </div>
+            <div id="subscribedList" class="chip-list">
+              <span class="chip chip--muted">Chưa subscribe</span>
+            </div>
+          </div>
+
+          <div class="topic-block">
+            <label class="field-label" for="publishTopic">Gửi (Publish)</label>
+            <input type="text" id="publishTopic" value="electric" />
+          </div>
+        </section>
+      </div>
+
+      <section class="card card--relay animate-in animate-in--d3">
+        <div class="card__title">
+          <h2>Điều khiển Relay</h2>
+          <span class="card__tag card__tag--green">Firebase + MQTT</span>
+        </div>
+        <p class="hint">
+          Trạng thái đồng bộ realtime qua Firebase RTDB. Bật/tắt gửi lệnh MQTT topic <code>relay</code>.
+        </p>
+        <div class="relay-panel" id="relayPanel">
+          <div class="relay-panel__status">
+            <div class="relay-icon-wrap" id="relayIconWrap">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2v10M8 10h8M5 14h14v6H5z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div>
+              <strong id="relayStatusLabel">Đang tắt</strong>
+              <p class="hint relay-panel__meta">Nguồn: <span id="relayUpdatedBy">—</span></p>
+            </div>
+            <span id="relayStatusDot" class="relay-dot relay-dot--off"></span>
+          </div>
+          <div class="relay-panel__actions">
+            <button type="button" id="btnRelayOff" class="relay-toggle-btn" disabled>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2v4M8 6h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Tắt</span>
+            </button>
+            <button type="button" id="btnRelayOn" class="relay-toggle-btn relay-toggle-btn--on" disabled>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2L4.5 13.5H11L10 22L19.5 9.5H13L13 2Z" fill="currentColor"/></svg>
+              <span>Bật</span>
+            </button>
+          </div>
+        </div>
+        <p id="relaySyncHint" class="hint relay-sync-hint">Đang kết nối Firebase...</p>
+      </section>
+
+      <section class="card animate-in animate-in--d4">
+        <div class="card__head">
+          <div class="card__title">
+            <h2>Bản tin nhận được</h2>
+            <span class="pulse-dot pulse-dot--hidden" id="inboxPulse"></span>
+          </div>
+          <button id="btnClearInbox" class="btn btn--ghost btn--sm">Xóa</button>
+        </div>
+        <div id="inbox" class="inbox">
+          <div class="inbox__empty">
+            <div class="inbox__empty-icon">📡</div>
+            <p>Chưa có bản tin. Kết nối MQTT và subscribe topic.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__head">
+          <div class="card__title"><h2>Nhật ký hoạt động</h2></div>
+          <button id="btnClearLog" class="btn btn--ghost btn--sm">Xóa log</button>
+        </div>
+        <div id="log" class="log"></div>
+      </section>
+    </div>
+
+    <!-- TAB KIỂM THỬ -->
+    <div id="tab-test" class="tab-panel" role="tabpanel" hidden>
+      <section class="card fake-card animate-in">
+        <div class="fake-card__glow"></div>
+        <div class="fake-card__content">
+          <div class="fake-card__header">
+            <div>
+              <span class="fake-card__badge">Tính năng</span>
+              <h2>Fake Data Publisher</h2>
+              <p class="hint">Tự động gửi dữ liệu giả lập theo chu kỳ sạc → cảnh báo → sạc lại.</p>
+            </div>
+            <label class="toggle toggle--lg" title="Bật/tắt Fake Data">
+              <input type="checkbox" id="fakeToggle" disabled />
+              <span class="toggle__slider"></span>
+            </label>
+          </div>
+
+          <div class="fake-card__body">
+            <div id="fakeStatus" class="fake-status fake-status--off">
+              <span class="fake-status__dot"></span>
+              <span id="fakeStatusText">Đang tắt</span>
+            </div>
+            <div class="fake-card__info">
+              <div class="fake-info-item">
+                <span class="fake-info-item__label">Topic gửi</span>
+                <code id="fakeTopicPreview">electric</code>
+              </div>
+              <div class="fake-info-item">
+                <span class="fake-info-item__label">Chu kỳ</span>
+                <span>2 giây / bản tin</span>
+              </div>
+              <div class="fake-info-item">
+                <span class="fake-info-item__label">Đã gửi</span>
+                <span id="fakeSentCount">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid grid--2">
+        <section class="card animate-in animate-in--d1">
+          <div class="card__title"><h2>Gửi dữ liệu điện</h2></div>
+          <form id="manualForm" class="manual-form">
+            <label>
+              Điện áp (V)
+              <input type="number" id="inVoltage" value="220" step="0.1" min="0" />
+            </label>
+            <label>
+              Dòng điện (A)
+              <input type="number" id="inCurrent" value="10" step="0.01" min="0" />
+            </label>
+            <label>
+              Năng lượng (kWh)
+              <input type="number" id="inEnergy" value="1.5" step="0.001" min="0" />
+            </label>
+            <label>
+              Cảnh báo
+              <select id="inAlarm">
+                <option value="0">Bình thường</option>
+                <option value="1">Có cảnh báo</option>
+              </select>
+            </label>
+            <button type="submit" class="btn btn--accent btn--full" id="btnPublish" disabled>
+              Gửi bản tin
+            </button>
+          </form>
+        </section>
+
+        <section class="card animate-in animate-in--d2">
+          <div class="card__title"><h2>Gửi JSON tùy chỉnh</h2></div>
+          <form id="rawForm" class="raw-form">
+            <label>
+              Topic
+              <input type="text" id="rawTopic" placeholder="Mặc định: topic publish" />
+            </label>
+            <label class="raw-form__payload">
+              Payload JSON
+              <textarea id="rawPayload" rows="8" spellcheck="false">{
+  "voltage": 220,
+  "current": 12.5,
+  "power": 2.75,
+  "energy": 3.2,
+  "alarm": 0,
+  "hour": 12,
+  "minute": 30
+}</textarea>
+            </label>
+            <button type="submit" class="btn btn--primary btn--full" id="btnRawPublish" disabled>
+              Gửi JSON
+            </button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://unpkg.com/mqtt@5.10.4/dist/mqtt.min.js"></script>
+  <script src="js/charging-animation.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/fake-generator.js"></script>
+  <script src="js/relay-service.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

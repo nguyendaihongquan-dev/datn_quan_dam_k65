@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "790076437485",
+    "project_id": "datn-cuan",
+    "storage_bucket": "datn-cuan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:790076437485:android:fcf4a0c1bc330f2c44ede4",
+        "android_client_info": {
+          "package_name": "com.evcharging.ev_charging_station"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCT-nCt_HXY5uv_bLCshFGpUL1_anpeBwM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "ev_charging": {
+      "relay": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}
