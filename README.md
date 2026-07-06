@@ -11,6 +11,51 @@ Hướng dẫn chi tiết: [docs/HUONG_DAN_SU_DUNG.md](docs/HUONG_DAN_SU_DUNG.md
 
 ---
 
+## Giao diện
+
+### Web Admin — Tab Quản lý
+
+Dashboard giám sát realtime qua MQTT. Header hiển thị số bản tin **Nhận/Gửi** và trạng thái **Online**.
+
+![Web Admin — Tab Quản lý](docs/images/web-admin-quan-ly.png)
+
+| Khu vực | Mô tả |
+|---------|--------|
+| **Giám sát realtime** | Trạng thái trạm (Đang sạc / Chờ dữ liệu), biểu đồ công suất, sơ đồ luồng Lưới điện → Trạm sạc → Pin xe |
+| **Thẻ số liệu** | Điện áp (V), dòng điện (A), công suất (kW), năng lượng (kWh) |
+| **Kết nối Broker** | Cấu hình host HiveMQ Cloud, nút Kết nối/Ngắt |
+| **Cấu hình Topic** | Subscribe topic `electric` (app Flutter cũng lắng nghe topic này) |
+| **Điều khiển Relay** | Bật/Tắt relay, đồng bộ Firebase + gửi MQTT topic `relay` |
+
+### Web Admin — Tab Kiểm thử
+
+Dùng để giả lập thiết bị gửi dữ liệu khi chưa có ESP32/hardware.
+
+![Web Admin — Tab Kiểm thử](docs/images/web-admin-kiem-thu.png)
+
+| Khu vực | Mô tả |
+|---------|--------|
+| **Fake Data Publisher** | Toggle bật/tắt — tự gửi JSON lên topic `electric` mỗi 2 giây, mô phỏng chu kỳ sạc → cảnh báo → sạc lại |
+| **Gửi dữ liệu điện** | Form nhập điện áp, dòng, năng lượng, cảnh báo → bấm **Gửi bản tin** |
+| **Gửi JSON tùy chỉnh** | Nhập topic và payload JSON thủ công → bấm **Gửi JSON** |
+
+### App Flutter — Màn hình chính
+
+Ứng dụng mobile giám sát trạm sạc, nhận dữ liệu từ topic `electric`.
+
+![App Flutter — Màn hình chính](docs/images/app-flutter-home.png)
+
+| Khu vực | Mô tả |
+|---------|--------|
+| **Header** | Tiêu đề EV Charging, badge **MQTT Online/Offline** |
+| **Cảnh báo timeout** | Hiện khi 15 giây không nhận dữ liệu — chuyển giao diện mặc định |
+| **Sơ đồ luồng** | Lưới điện → Trạm sạc → Pin xe (animation theo trạng thái sạc) |
+| **Thẻ số liệu** | Điện áp, dòng điện, công suất |
+| **Năng lượng tiêu thụ** | Tổng kWh + thời gian cập nhật |
+| **Điều khiển Relay** | Nút Bật/Tắt, hiển thị nguồn cập nhật (`app` / `web`) |
+
+---
+
 ## Yêu cầu
 
 - Flutter SDK (FVM 3.35.3 — xem `.fvmrc`)
