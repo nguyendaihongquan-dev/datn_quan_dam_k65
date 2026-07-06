@@ -114,12 +114,18 @@ body {
   width: 46px;
   height: 46px;
   border-radius: 14px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  overflow: hidden;
   display: grid;
   place-items: center;
-  color: #041208;
   box-shadow: 0 4px 20px rgba(0, 230, 118, 0.25);
   animation: icon-pulse 3s ease-in-out infinite;
+}
+
+.header__logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 @keyframes icon-pulse {

@@ -195,23 +195,37 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  const Text(
-                    'EV Charging',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.asset(
+                      'assets/icon/app_icon.png',
+                      width: 48,
+                      height: 48,
+                      fit: BoxFit.cover,
                     ),
                   ),
-                  Text(
-                    'Trạm sạc năng lượng',
-                    style: TextStyle(
-                      color: AppColors.textSecondary.withValues(alpha: 0.8),
-                      fontSize: 13,
-                    ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'EV Charging',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'Trạm sạc năng lượng',
+                        style: TextStyle(
+                          color: AppColors.textSecondary.withValues(alpha: 0.8),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
