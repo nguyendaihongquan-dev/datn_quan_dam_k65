@@ -69,6 +69,8 @@ class RelayControlCard extends StatelessWidget {
                           state.isSyncing
                               ? 'Đang đồng bộ...'
                               : 'Nguồn: ${state.updatedBy}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
@@ -124,6 +126,8 @@ class RelayControlCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   state.error!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: AppColors.warning, fontSize: 12),
                 ),
               ],

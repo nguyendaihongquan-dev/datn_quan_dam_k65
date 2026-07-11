@@ -22,7 +22,7 @@ class MetricCard extends StatelessWidget {
     final color = accentColor ?? AppColors.primary;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
@@ -37,21 +37,29 @@ class MetricCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: 22),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
           const SizedBox(height: 2),
           Text(
             '$label ($unit)',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 11,

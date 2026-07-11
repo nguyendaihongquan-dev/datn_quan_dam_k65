@@ -230,46 +230,42 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
       children: [
         const SizedBox(height: 16),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Image.asset(
-                    'assets/icon/app_icon.png',
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
+            Expanded(
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.asset(
+                      'assets/icon/app_icon.png',
+                      width: 48,
+                      height: 48,
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 14),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'EV Charging',
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Text(
+                      'Energy Monitoring',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 26,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      'Trạm sạc năng lượng',
-                      style: TextStyle(
-                        color: AppColors.textSecondary.withValues(alpha: 0.8),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-            ConnectionStatus(
-              isConnected: _isConnected,
-              isConnecting: _isConnecting,
-              error: _error,
+            const SizedBox(width: 8),
+            Flexible(
+              child: ConnectionStatus(
+                isConnected: _isConnected,
+                isConnecting: _isConnecting,
+                error: _error,
+              ),
             ),
           ],
         ),
@@ -277,88 +273,93 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
         if (_isConnecting && !_isConnected) _buildConnectingBanner(),
         if (_isUsingDefaultData) _buildDefaultDataBanner(),
         if (_hasAlarmFor(data)) _buildAlarmBanner(),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppColors.surface,
-                AppColors.surfaceLight.withValues(alpha: 0.5),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: _statusColor.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            children: [
-              ChargingStationAnimation(
-                isCharging: _isChargingFor(data),
-                hasAlarm: _hasAlarmFor(data),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: _statusColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: _statusColor.withValues(alpha: 0.5),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    !_hasLiveData ? 'Không có dữ liệu' : data.statusLabel,
-                    style: TextStyle(
-                      color: _statusColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        // Container(
+        //   width: double.infinity,
+        //   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        //   decoration: BoxDecoration(
+        //     gradient: LinearGradient(
+        //       begin: Alignment.topLeft,
+        //       end: Alignment.bottomRight,
+        //       colors: [
+        //         AppColors.surface,
+        //         AppColors.surfaceLight.withValues(alpha: 0.5),
+        //       ],
+        //     ),
+        //     borderRadius: BorderRadius.circular(24),
+        //     border: Border.all(color: _statusColor.withValues(alpha: 0.3)),
+        //   ),
+        //   child: Column(
+        //     children: [
+        //       // ChargingStationAnimation(
+        //       //   isCharging: _isChargingFor(data),
+        //       //   hasAlarm: _hasAlarmFor(data),
+        //       // ),
+        //       const SizedBox(height: 8),
+        //       // Row(
+        //       //   mainAxisAlignment: MainAxisAlignment.center,
+        //       //   children: [
+        //       //     Container(
+        //       //       width: 10,
+        //       //       height: 10,
+        //       //       decoration: BoxDecoration(
+        //       //         color: _statusColor,
+        //       //         shape: BoxShape.circle,
+        //       //         boxShadow: [
+        //       //           BoxShadow(
+        //       //             color: _statusColor.withValues(alpha: 0.5),
+        //       //             blurRadius: 8,
+        //       //           ),
+        //       //         ],
+        //       //       ),
+        //       //     ),
+        //       //     const SizedBox(width: 8),
+        //       //     // Text(
+        //       //     //   !_hasLiveData ? 'Không có dữ liệu' : data.statusLabel,
+        //       //     //   style: TextStyle(
+        //       //     //     color: _statusColor,
+        //       //     //     fontSize: 16,
+        //       //     //     fontWeight: FontWeight.w600,
+        //       //     //   ),
+        //       //     // ),
+        //       //   ],
+        //       // ),
+        //     ],
+        //   ),
+        // ),
         const SizedBox(height: 20),
-        GridView.count(
-          crossAxisCount: 3,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.85,
-          children: [
-            MetricCard(
-              label: 'Điện áp',
-              value: data.voltage.toStringAsFixed(1),
-              unit: 'V',
-              icon: Icons.bolt,
-              accentColor: AppColors.accent,
-            ),
-            MetricCard(
-              label: 'Dòng điện',
-              value: data.current.toStringAsFixed(2),
-              unit: 'A',
-              icon: Icons.electric_bolt,
-            ),
-            MetricCard(
-              label: 'Công suất',
-              value: data.power.toStringAsFixed(2),
-              unit: 'kW',
-              icon: Icons.speed,
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = constraints.maxWidth < 340 ? 2 : 3;
+            return GridView.count(
+              crossAxisCount: crossAxisCount,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: crossAxisCount == 2 ? 1.35 : 0.9,
+              children: [
+                MetricCard(
+                  label: 'Điện áp',
+                  value: data.voltage.toStringAsFixed(1),
+                  unit: 'V',
+                  icon: Icons.bolt,
+                  accentColor: AppColors.accent,
+                ),
+                MetricCard(
+                  label: 'Dòng điện',
+                  value: data.current.toStringAsFixed(2),
+                  unit: 'A',
+                  icon: Icons.electric_bolt,
+                ),
+                MetricCard(
+                  label: 'Công suất',
+                  value: data.power.toStringAsFixed(2),
+                  unit: 'kW',
+                  icon: Icons.speed,
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 16),
         _buildEnergyCard(data),
@@ -462,39 +463,59 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
               children: [
                 const Text(
                   'Năng lượng tiêu thụ',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  '${data.energy.toStringAsFixed(3)} kWh',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${data.energy.toStringAsFixed(3)} kWh',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const Text(
-                'Cập nhật',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-              ),
-              Text(
-                data.timeLabel,
-                style: const TextStyle(
-                  color: AppColors.accent,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+          const SizedBox(width: 8),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text(
+                  'Cập nhật',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                  ),
                 ),
-              ),
-            ],
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    data.timeLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

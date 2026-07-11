@@ -34,13 +34,14 @@ class ConnectionStatus extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      constraints: const BoxConstraints(maxWidth: double.infinity),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: dotColor.withValues(alpha: 0.4)),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           Container(
             width: 8,
@@ -57,12 +58,16 @@ class ConnectionStatus extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
