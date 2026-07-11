@@ -1,7 +1,7 @@
 name: ev_charging_station
 description: EV Charging Station - MQTT monitoring app
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+5
 
 environment:
   sdk: ^3.9.2
