@@ -1,4 +1,4 @@
-package com.evcharging.ev_charging_station
+package com.evcharging.datn
 
 import io.flutter.embedding.android.FlutterActivity
 

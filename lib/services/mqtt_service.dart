@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:ev_charging_station/config/app_config.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 
@@ -20,8 +21,8 @@ class MqttService {
   StreamSubscription? _updatesSubscription;
   bool _isConnected = false;
 
-  static const String dataTopic = 'electric';
-  static const String relayTopic = 'relay';
+  static const String dataTopic = AppConfig.electricTopic;
+  static const String relayTopic = AppConfig.relayTopic;
 
   static const String _host =
       'a8e2eca8b3a54e48a698499b8d22c91d.s1.eu.hivemq.cloud';

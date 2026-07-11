@@ -27,7 +27,7 @@ class EvChargingApp extends StatelessWidget {
         BlocProvider(create: (_) => RelayBloc()..add(const RelayInitEvent())),
       ],
       child: MaterialApp(
-        title: 'EV Charging Station',
+        title: 'Giám sát điện năng',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
         home: const ChargingHomeScreen(),

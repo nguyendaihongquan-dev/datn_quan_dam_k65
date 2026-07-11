@@ -353,14 +353,44 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
                 ),
                 MetricCard(
                   label: 'Công suất',
-                  value: data.power.toStringAsFixed(2),
-                  unit: 'kW',
+                  value: data.power.toStringAsFixed(1),
+                  unit: 'W',
                   icon: Icons.speed,
+                ),
+                MetricCard(
+                  label: 'Tần số',
+                  value: data.frequency.toStringAsFixed(1),
+                  unit: 'Hz',
+                  icon: Icons.waves,
+                ),
+                MetricCard(
+                  label: 'Hệ số công suất',
+                  value: data.pf.toStringAsFixed(2),
+                  unit: 'PF',
+                  icon: Icons.power,
+                ),
+                MetricCard(
+                  label: 'Nhiệt độ',
+                  value: data.temperature.toStringAsFixed(1),
+                  unit: '°C',
+                  icon: Icons.thermostat,
+                  accentColor: AppColors.warning,
+                ),
+                MetricCard(
+                  label: 'Độ ẩm',
+                  value: data.humidity.toStringAsFixed(1),
+                  unit: '%',
+                  icon: Icons.water_drop_outlined,
+                  accentColor: AppColors.accent,
                 ),
               ],
             );
           },
         ),
+        const SizedBox(height: 16),
+        _buildDeviceTimeCard(data),
+        const SizedBox(height: 16),
+        _buildStatusCard(data),
         const SizedBox(height: 16),
         _buildEnergyCard(data),
         const SizedBox(height: 16),
@@ -428,6 +458,112 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDeviceTimeCard(ElectricData data) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.schedule, color: AppColors.accent),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _hasLiveData && data.rtcValid != 0
+                      ? 'Thời gian thiết bị'
+                      : 'Thời gian thiết bị (RTC chưa hợp lệ)',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  data.dateLabel,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  data.timeLabel,
+                  style: const TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(ElectricData data) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _buildStatusChip('WiFi', data.wifi != 0),
+          _buildStatusChip('MQTT', data.mqttConnected != 0),
+          _buildStatusChip('PZEM', data.pzemValid != 0),
+          _buildStatusChip('DHT', data.dhtValid != 0),
+          _buildStatusChip('RTC', data.rtcValid != 0),
+          _buildStatusChip('Relay', data.relayOn, activeLabel: 'Bật'),
+          if (data.temperatureAlarm != 0)
+            _buildStatusChip('Nhiệt độ', true, activeLabel: 'Cảnh báo'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label, bool isActive, {String? activeLabel}) {
+    final color = isActive ? AppColors.primary : AppColors.textSecondary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        '$label: ${isActive ? (activeLabel ?? 'OK') : 'OFF'}',
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

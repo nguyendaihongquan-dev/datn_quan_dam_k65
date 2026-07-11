@@ -1,0 +1,33 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Tạo app record trên App Store Connect (chạy 1 lần)"
+  lane :create_app do
+    produce(
+      app_identifier: "com.evcharging.datn",
+      app_name: "Giám sát điện năng",
+      app_version: "1.0",
+      sku: "giam-sat-dien-nang",
+      language: "vi",
+      skip_devcenter: true
+    )
+  end
+
+  desc "Build và upload lên TestFlight"
+  lane :beta do
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
+      export_method: "app-store",
+      export_options: {
+        method: "app-store",
+        teamID: "N5R65NZYPS",
+        uploadSymbols: true,
+        manageAppVersionAndBuildNumber: true
+      }
+    )
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+end

@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.evcharging.ev_charging_station"
+    namespace = "com.evcharging.datn"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.evcharging.ev_charging_station"
+        applicationId = "com.evcharging.datn"
         // Firebase yêu cầu minSdk >= 21
         minSdk = maxOf(flutter.minSdkVersion, 21)
         targetSdk = flutter.targetSdkVersion

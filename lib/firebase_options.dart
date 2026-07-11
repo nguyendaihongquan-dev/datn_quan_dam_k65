@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '790076437485',
     projectId: 'datn-cuan',
     storageBucket: 'datn-cuan.firebasestorage.app',
-    iosBundleId: 'com.evcharging.evChargingStation',
+    iosBundleId: 'com.evcharging.datn',
   );
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'REPLACE_ME',
@@ -59,6 +59,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '000000000000',
     projectId: 'ev-charging-station',
     storageBucket: 'ev-charging-station.firebasestorage.app',
-    iosBundleId: 'com.evcharging.evChargingStation',
+    iosBundleId: 'com.evcharging.datn',
   );
 }
