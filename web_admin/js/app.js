@@ -1,8 +1,8 @@
 const CONFIG = {
-  host: 'a8e2eca8b3a54e48a698499b8d22c91d.s1.eu.hivemq.cloud',
-  port: 8884,
-  username: 'LongNe',
-  password: 'Abc@1234',
+  host: MQTT_CONFIG.host,
+  port: MQTT_CONFIG.webSocketPort,
+  username: MQTT_CONFIG.username,
+  password: MQTT_CONFIG.password,
   defaultSubscribeTopic: 'electric',
   defaultPublishTopic: 'electric',
   defaultRelayTopic: 'relay',

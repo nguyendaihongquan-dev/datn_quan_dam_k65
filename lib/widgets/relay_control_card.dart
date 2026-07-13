@@ -122,15 +122,15 @@ class RelayControlCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (state.error != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  state.error!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.warning, fontSize: 12),
-                ),
-              ],
+              // if (state.error != null) ...[
+              //   const SizedBox(height: 12),
+              //   Text(
+              //     state.error!,
+              //     maxLines: 2,
+              //     overflow: TextOverflow.ellipsis,
+              //     style: const TextStyle(color: AppColors.warning, fontSize: 12),
+              //   ),
+              // ],
             ],
           ),
         );

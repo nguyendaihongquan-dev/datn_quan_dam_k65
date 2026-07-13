@@ -24,11 +24,10 @@ class MqttService {
   static const String dataTopic = AppConfig.electricTopic;
   static const String relayTopic = AppConfig.relayTopic;
 
-  static const String _host =
-      'a8e2eca8b3a54e48a698499b8d22c91d.s1.eu.hivemq.cloud';
-  static const int _port = 8883;
-  static const String _username = 'LongNe';
-  static const String _password = 'Abc@1234';
+  static const String _host = AppConfig.mqttHost;
+  static const int _port = AppConfig.mqttTlsPort;
+  static const String _username = AppConfig.mqttUsername;
+  static const String _password = AppConfig.mqttPassword;
 
   Stream<MqttMessageWrapper>? get messageStream =>
       _messageStreamController?.stream;

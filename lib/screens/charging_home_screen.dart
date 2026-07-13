@@ -272,7 +272,7 @@ class _ChargingHomeScreenState extends State<ChargingHomeScreen> {
         const SizedBox(height: 24),
         if (_isConnecting && !_isConnected) _buildConnectingBanner(),
         if (_isUsingDefaultData) _buildDefaultDataBanner(),
-        if (_hasAlarmFor(data)) _buildAlarmBanner(),
+        // if (_hasAlarmFor(data)) _buildAlarmBanner(),
         // Container(
         //   width: double.infinity,
         //   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),

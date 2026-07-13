@@ -2,6 +2,15 @@
 class AppConfig {
   AppConfig._();
 
+  // MQTT broker (HiveMQ Cloud)
+  static const String mqttBrokerId = 'b244e8ff9c534d3ebd90d41438747065';
+  static const String mqttHost =
+      'b244e8ff9c534d3ebd90d41438747065.s1.eu.hivemq.cloud';
+  static const int mqttTlsPort = 8883;
+  static const int mqttWebSocketPort = 8884;
+  static const String mqttUsername = 'quantest';
+  static const String mqttPassword = '12345678';
+
   // MQTT topics
   static const String electricTopic = 'electric';
   static const String relayTopic = 'relay';
